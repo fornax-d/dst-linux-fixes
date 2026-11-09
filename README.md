@@ -72,6 +72,8 @@ soname, so it takes its place, and depends on the runtime's
   sleeping to absolute deadlines.
 - `src/exit.c` – after the first `SDL_Quit` (settings already saved) the
   process ends with `_exit()`.
+- `src/glx.c` – on Wayland the game's GLEW asks for the GLX version of a NULL
+  display and then reads uninitialized values; it now gets 1.4.
 
 `make` builds into `build/`, `make check` lists the glibc versions and
 libraries needed (glibc 2.17 is enough), `make prebuilt` refreshes `prebuilt/`.

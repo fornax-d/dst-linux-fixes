@@ -5,7 +5,7 @@
 CC     ?= cc
 CFLAGS ?= -O2
 RUNTIME_SDL := /usr/lib/x86_64-linux-gnu/sdl2-compat/libSDL2-2.0.so.0
-SRC := src/common.c src/sdl.c src/fps.c src/exit.c
+SRC := src/common.c src/sdl.c src/fps.c src/exit.c src/glx.c
 
 all: build/dst_fixes.so
 
