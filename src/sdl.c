@@ -71,9 +71,12 @@ int SDL_GL_SetSwapInterval(int interval) {
     return real_SDL_GL_SetSwapInterval(env_int("DST_SWAP_INTERVAL", interval));
 }
 
-/* sdl2-compat defaults to X11; DST_WAYLAND: 1 always, 0 never, unset = in a Wayland session. */
+/* Set before SDL starts; an existing value always wins. */
 __attribute__((constructor))
-static void choose_video_driver(void) {
+static void set_sdl_env(void) {
+    /* sdl2-compat defaults to X11; DST_WAYLAND: 1 always, 0 never, unset = in a Wayland session. */
     int wayland = env_int("DST_WAYLAND", getenv("WAYLAND_DISPLAY") != NULL);
-    if (wayland && !getenv("SDL_VIDEODRIVER")) setenv("SDL_VIDEODRIVER", "wayland", 0);
+    if (wayland) setenv("SDL_VIDEODRIVER", "wayland", 0);
+    /* Fullscreen stays up on alt-tab / a second monitor. */
+    setenv("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", "0", 0);
 }

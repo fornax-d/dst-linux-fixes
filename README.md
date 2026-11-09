@@ -38,6 +38,7 @@ Put them in front, e.g. `DST_FPS_LIMIT=144 LD_PRELOAD=… %command%`.
 | `DST_FPS_LIMIT` | `0` | `0`: no cap (vsync), `N`: N fps, `game`: original 60 |
 | `DST_FAST_EXIT` | `1` | `0`: disable the exit fix |
 | `DST_SWAP_INTERVAL` | game's | `0`: vsync off |
+| `SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS` | `0` | `1`: minimize fullscreen on focus loss (SDL default) |
 
 With vsync a cap only helps at or above the refresh rate. Don't combine it with
 MangoHud's `fps_limit`.
