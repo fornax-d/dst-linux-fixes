@@ -51,6 +51,9 @@ MangoHud's `fps_limit`.
   options.
 - **MangoHud hidden:** a per-game `~/.config/MangoHud/dontstarve_steam_x64.conf`
   with `no_display` starts it hidden.
+- **Steam overlay doesn't work on Wayland:** Steam draws it for OpenGL games
+  only through GLX and reads input only from X11 (natively it works only under
+  gamescope). Use `DST_WAYLAND=0` when you need the overlay.
 - **After a game update** that changes the patched code, the fps part prints
   `unknown game build` and leaves the 60 fps cap; the rest keeps working.
 - `ERROR: ld.so: object '$ORIGIN/shims/dst_fixes.so' … ignored` comes from
