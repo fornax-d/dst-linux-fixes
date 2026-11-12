@@ -11,6 +11,9 @@ modified.
 Needs Steam's default Linux runtime for the game; works on any x86-64
 distribution. Tested with game version 762172, Intel and NVIDIA, KDE Plasma.
 
+For single-player Don't Starve see
+[ds-linux-fixes](https://github.com/fornax-d/ds-linux-fixes).
+
 ## Install
 
 ```sh
