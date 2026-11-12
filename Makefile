@@ -5,14 +5,14 @@
 CC     ?= cc
 CFLAGS ?= -O2
 RUNTIME_SDL := /usr/lib/x86_64-linux-gnu/sdl2-compat/libSDL2-2.0.so.0
-SRC := src/common.c src/sdl.c src/fps.c src/exit.c src/glx.c
+SRC := src/common.c src/sdl.c src/fps.c src/exit.c src/glx.c src/config.c
 
 all: build/dst_fixes.so
 
 # The soname makes it stand in for the game's libSDL2; linking against an empty
 # library whose soname is the runtime path records that path as a dependency.
 build/dst_fixes.so: $(SRC) src/common.h build/runtime_sdl.so
-	$(CC) $(CFLAGS) -Wall -Wextra -shared -fPIC -Wl,-soname,libSDL2-2.0.so.0 -o $@ $(SRC) \
+	$(CC) $(CFLAGS) -U_FORTIFY_SOURCE -Wall -Wextra -shared -fPIC -Wl,-soname,libSDL2-2.0.so.0 -o $@ $(SRC) \
 		-Wl,--no-as-needed build/runtime_sdl.so -l:libdl.so.2
 
 build/runtime_sdl.so:
