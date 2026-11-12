@@ -22,3 +22,4 @@ __asm__(".symver dlerror,dlerror@GLIBC_2.2.5");
 INTERNAL int is_game(void);                 /* the client, not a dedicated server or helper */
 INTERNAL int env_int(const char *name, int def);
 INTERNAL void *sdl_sym(const char *name);   /* the runtime SDL's function; aborts if missing */
+INTERNAL void keys_enable_extra(void);      /* F16-F24, once their names exist (keys.c) */

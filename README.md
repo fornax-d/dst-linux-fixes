@@ -7,6 +7,7 @@ modified.
   SDL is X11-only), with the game's mouse handling kept correct.
 - **No 60 fps cap**, or any cap with accurate frame pacing.
 - **No crash on exit** (seen with NVIDIA drivers and MangoHud).
+- **F13–F24 keys** (e.g. from mouse or keyboard macros), which the game ignores.
 
 Needs Steam's default Linux runtime for the game; works on any x86-64
 distribution. Tested with game version 762172, Intel and NVIDIA, KDE Plasma.
@@ -52,6 +53,21 @@ so delete it (or set the options back first) to return to the defaults.
 With vsync a cap only helps at or above the refresh rate. Don't combine it with
 MangoHud's `fps_limit`.
 
+## F13–F24
+
+The game drops these keys: its key table has no entries for them, on X11 and
+Wayland alike. The library fills them in, so they work as in-game keys and can
+be bound in Controls:
+
+- **F13–F15** always, with the game's own codes and names.
+- **F16–F24** only with the Linux options mod enabled. The game has no names
+  for them, and a key without a name breaks prompts and Controls, so the mod
+  adds the names and then switches them on.
+
+Some desktops treat some of these keys as special keys (KDE's default layout:
+F20 mutes the microphone, F21–F23 toggle the touchpad) and may grab them before
+the game sees them.
+
 ## Notes
 
 - **Laptops with two GPUs:** add `prime-run` (NVIDIA) or `DRI_PRIME=1` (AMD).
@@ -64,7 +80,8 @@ MangoHud's `fps_limit`.
   only through GLX and reads input only from X11 (natively it works only under
   gamescope). Use `DST_WAYLAND=0` when you need the overlay.
 - **After a game update** that changes the patched code, the fps part prints
-  `unknown game build` and leaves the 60 fps cap; the rest keeps working.
+  `unknown game build` and leaves the 60 fps cap (`unknown game build, F13-F24
+  not enabled` for the keys); the rest keeps working.
 - `ERROR: ld.so: object '$ORIGIN/shims/dst_fixes.so' … ignored` comes from
   Steam's helper processes and is harmless.
 
@@ -88,7 +105,10 @@ soname, so it takes its place, and depends on the runtime's
   display and then reads uninitialized values; it now gets 1.4.
 - `src/config.c` – reads the Linux options mod's file at start and reports
   what the run uses to the mod (through a `dst_linux_status` file that it
-  answers from memory; on disk it only says `loaded=0`).
+  answers from memory; on disk it only says `loaded=0`). The mod reading
+  `dst_linux_keys` switches on F16–F24.
+- `src/keys.c` – fills the F13–F24 entries of the game's scancode → key table
+  (found by its contents), F16–F24 with unused codes 323–331.
 
 `make` builds into `build/`, `make check` lists the glibc versions and
 libraries needed (glibc 2.17 is enough), `make prebuilt` refreshes `prebuilt/`.

@@ -7,7 +7,10 @@
  * The mod reads  .../client_save/dst_linux_status  to show what this run uses.
  * On disk that file only says "loaded=0"; while we are loaded, opening it
  * returns the real status from memory. So without us the tab sees "not loaded"
- * instead of a stale status from an earlier run. */
+ * instead of a stale status from an earlier run.
+ *
+ * The mod reads  .../client_save/dst_linux_keys  once it has added the names of
+ * F16-F24; that turns those keys on (keys.c). On disk it is an empty placeholder. */
 #include "common.h"
 #include <dirent.h>
 #include <fcntl.h>
@@ -19,6 +22,7 @@
 
 #define OPTIONS_FILE "dst_linux_options"
 #define STATUS_FILE "dst_linux_status"
+#define KEYS_FILE "dst_linux_keys"
 #define HEADER "KLEI     1 "   /* persistent string, not encoded */
 
 /* stat() is GLIBC_2.33; the old entry point works everywhere. */
@@ -78,10 +82,11 @@ static void apply_options(const char *path) {
     fclose(f);
     buf[len] = 0;
     char *p = buf, *line;
-    if (!strncmp(p, "KLEI", 4)) p += strlen(HEADER);
+    if (len >= sizeof HEADER - 1 && !memcmp(p, HEADER, sizeof HEADER - 1)) p += sizeof HEADER - 1;
     while ((line = strsep(&p, "\n"))) {
-        char *eq = strchr(line, '='), *v = eq + 1;
+        char *eq = strchr(line, '=');
         if (!eq || !known_key(line, (size_t)(eq - line))) continue;
+        char *v = eq + 1;
         size_t vn = strspn(v, "abcdefghijklmnopqrstuvwxyz0123456789");
         if (!vn || (v[vn] != 0 && v[vn] != '\r')) continue;
         v[vn] = *eq = 0;
@@ -89,19 +94,24 @@ static void apply_options(const char *path) {
     }
 }
 
-static void write_placeholder(const char *dir, void *arg) {
-    (void)arg;
-    static const char text[] = HEADER "loaded=0\n";
+static void write_file(const char *dir, const char *name, const char *text) {
     char path[1100], old[64];
-    snprintf(path, sizeof path, "%s/" STATUS_FILE, dir);
+    size_t len = strlen(text);
+    snprintf(path, sizeof path, "%s/%s", dir, name);
     FILE *f = fopen(path, "r");
     size_t n = f ? fread(old, 1, sizeof old, f) : 0;
     if (f) fclose(f);
-    if (n == sizeof text - 1 && !memcmp(old, text, n)) return;
+    if (n == len && !memcmp(old, text, n)) return;
     if ((f = fopen(path, "w"))) {
         fputs(text, f);
         fclose(f);
     }
+}
+
+static void write_placeholders(const char *dir, void *arg) {
+    (void)arg;
+    write_file(dir, STATUS_FILE, HEADER "loaded=0\n");
+    write_file(dir, KEYS_FILE, HEADER);
 }
 
 static void add(const char *fmt, ...) {
@@ -122,7 +132,7 @@ static void load_config(void) {
     struct newest n = { "", 0 };
     each_client_save(find_options, &n);
     if (n.path[0]) apply_options(n.path);
-    each_client_save(write_placeholder, NULL);
+    each_client_save(write_placeholders, NULL);
 
     /* same rule as set_sdl_env() in sdl.c */
     const char *drv = getenv("SDL_VIDEODRIVER");
@@ -139,31 +149,43 @@ static void load_config(void) {
     add("\n");
 }
 
-static int is_status(const char *path) {
-    static const char suffix[] = "client_save/" STATUS_FILE;
-    size_t n = path ? strlen(path) : 0;
-    return status_len && n >= sizeof suffix - 1 && !strcmp(path + n - (sizeof suffix - 1), suffix);
+static int is_client_save(const char *path, const char *name) {
+    char suffix[64];
+    size_t n = path ? strlen(path) : 0, sn = (size_t)snprintf(suffix, sizeof suffix, "client_save/%s", name);
+    return status_len && n >= sn && !strcmp(path + n - sn, suffix);
 }
 
-/* A fresh in-memory file with the status, positioned at its start. */
-static int status_fd(void) {
-    int fd = (int)syscall(SYS_memfd_create, "dst_linux_status", 0);
+/* Our answer to a plain read of one of our files, or -1 to let it through. */
+static int answer_fd(const char *path) {
+    const char *text;
+    int len;
+    if (is_client_save(path, STATUS_FILE)) {
+        text = status, len = status_len;
+    } else if (is_client_save(path, KEYS_FILE)) {
+        keys_enable_extra();
+        text = HEADER, len = sizeof HEADER - 1;
+    } else {
+        return -1;
+    }
+    /* a fresh in-memory file, positioned at its start */
+    int fd = (int)syscall(SYS_memfd_create, "dst_linux", 0);
     if (fd < 0) return -1;
-    if (write(fd, status, status_len) != status_len) { close(fd); return -1; }
+    if (write(fd, text, len) != len) { close(fd); return -1; }
     lseek(fd, 0, SEEK_SET);
     return fd;
 }
 
 static void *libc_sym(const char *name) {
     void *libc = dlopen("libc.so.6", RTLD_NOW | RTLD_NOLOAD);
-    return libc ? dlsym(libc, name) : NULL;
+    void *sym = libc ? dlsym(libc, name) : NULL;
+    return sym ? sym : dlsym(RTLD_NEXT, name);
 }
 
 /* The game reads persistent strings through these (only plain reads are redirected). */
 FILE *fopen(const char *path, const char *mode) {
     static FILE *(*real)(const char *, const char *);
-    if (is_status(path) && mode[0] == 'r' && !strchr(mode, '+')) {
-        int fd = status_fd();
+    if (mode[0] == 'r' && !strchr(mode, '+')) {
+        int fd = answer_fd(path);
         FILE *f = fd >= 0 ? fdopen(fd, "r") : NULL;
         if (f) return f;
         if (fd >= 0) close(fd);
@@ -181,8 +203,8 @@ int open(const char *path, int flags, ...) {
         mode = va_arg(ap, mode_t);
         va_end(ap);
     }
-    if (is_status(path) && (flags & O_ACCMODE) == O_RDONLY) {
-        int fd = status_fd();
+    if ((flags & O_ACCMODE) == O_RDONLY) {
+        int fd = answer_fd(path);
         if (fd >= 0) return fd;
     }
     if (!real) real = (int (*)(const char *, int, ...))libc_sym("open");
