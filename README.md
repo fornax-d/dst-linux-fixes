@@ -43,6 +43,8 @@ Put them in front, e.g. `DST_FPS_LIMIT=144 LD_PRELOAD=… %command%`.
 The same settings can be changed in game: the **Linux options** mod (Steam
 Workshop) adds a Linux tab to Options. It saves them to
 `~/.klei/DoNotStarveTogether/<id>/client_save/dst_linux_options`, read at the next start; launch options win.
+The library works without the mod; the file stays after the mod is removed,
+so delete it (or set the options back first) to return to the defaults.
 
 With vsync a cap only helps at or above the refresh rate. Don't combine it with
 MangoHud's `fps_limit`.
